@@ -10,8 +10,10 @@ type BrokerControllerImpl struct {
 	svc service.BrokerService
 }
 
-func NewBrokerController() *BrokerControllerImpl {
-	return &BrokerControllerImpl{svc: service.NewBrokerService()}
+func NewBrokerController(r *gin.RouterGroup) *BrokerControllerImpl {
+	c := &BrokerControllerImpl{svc: service.NewBrokerService()}
+	c.RegisterRoutes(r)
+	return c
 }
 
 type BrokerController interface {

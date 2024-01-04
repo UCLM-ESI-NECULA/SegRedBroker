@@ -10,16 +10,12 @@ func SetupRouter() *gin.Engine {
 
 	r := gin.Default()
 	r.Use(common.GlobalErrorHandler())
-
 	v1 := r.Group("/api/v1")
 
-	brokerCtrl := controller.NewBrokerController()
-	brokerCtrl.RegisterRoutes(v1)
+	controller.NewBrokerController(v1)
 
-	fileCtrl := controller.NewFileController()
-	fileCtrl.RegisterRoutes(v1)
+	controller.NewFileController(v1)
 
-	authCtrl := controller.NewAuthController()
-	authCtrl.RegisterRoutes(v1)
+	controller.NewAuthController(v1)
 	return r
 }

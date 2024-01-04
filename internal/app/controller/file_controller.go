@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"seg-red-broker/internal/app/client"
@@ -15,11 +16,13 @@ type FileControllerImpl struct {
 	as service.AuthService
 }
 
-func NewFileController() *FileControllerImpl {
-	return &FileControllerImpl{
+func NewFileController(r *gin.RouterGroup) *FileControllerImpl {
+	c := &FileControllerImpl{
 		fs: service.NewFileService(*client.NewFileClient()),
 		as: service.NewAuthService(*client.NewAuthClient()),
 	}
+	c.RegisterRoutes(r)
+	return c
 }
 
 type FileController interface {
@@ -43,11 +46,22 @@ func (fc *FileControllerImpl) GetFile(c *gin.Context) {
 	username, docID := checkParams(c)
 	_, err := fc.as.ValidateToken(checkTokenInput(c))
 	if err != nil {
+		var apiErr *common.APIError
+		if errors.As(err, &apiErr) {
+			common.NewAPIError(c, apiErr.StatusCode, apiErr.Err, apiErr.Message)
+			return
+		}
+		common.NewAPIError(c, http.StatusInternalServerError, err, err.Error())
 		return
 	}
 	content, err := fc.fs.GetFile(username, docID)
 	if err != nil {
-		common.NewAPIError(c, http.StatusNotFound, err, "file not found")
+		var apiErr *common.APIError
+		if errors.As(err, &apiErr) {
+			common.NewAPIError(c, apiErr.StatusCode, apiErr.Err, apiErr.Message)
+			return
+		}
+		common.NewAPIError(c, http.StatusInternalServerError, err, err.Error())
 		return
 	}
 	c.JSON(http.StatusOK, content)
@@ -57,6 +71,12 @@ func (fc *FileControllerImpl) CreateFile(c *gin.Context) {
 	username, docID := checkParams(c)
 	_, err := fc.as.ValidateToken(checkTokenInput(c))
 	if err != nil {
+		var apiErr *common.APIError
+		if errors.As(err, &apiErr) {
+			common.NewAPIError(c, apiErr.StatusCode, apiErr.Err, apiErr.Message)
+			return
+		}
+		common.NewAPIError(c, http.StatusInternalServerError, err, err.Error())
 		return
 	}
 	requestBody, err := io.ReadAll(c.Request.Body)
@@ -65,7 +85,16 @@ func (fc *FileControllerImpl) CreateFile(c *gin.Context) {
 		return
 	}
 
-	size, _ := fc.fs.CreateFile(username, docID, requestBody)
+	size, err := fc.fs.CreateFile(username, docID, requestBody)
+	if err != nil {
+		var apiErr *common.APIError
+		if errors.As(err, &apiErr) {
+			common.NewAPIError(c, apiErr.StatusCode, apiErr.Err, apiErr.Message)
+			return
+		}
+		common.NewAPIError(c, http.StatusInternalServerError, err, err.Error())
+		return
+	}
 	c.JSON(http.StatusOK, size)
 }
 
@@ -73,6 +102,12 @@ func (fc *FileControllerImpl) UpdateFile(c *gin.Context) {
 	username, docID := checkParams(c)
 	_, err := fc.as.ValidateToken(checkTokenInput(c))
 	if err != nil {
+		var apiErr *common.APIError
+		if errors.As(err, &apiErr) {
+			common.NewAPIError(c, apiErr.StatusCode, apiErr.Err, apiErr.Message)
+			return
+		}
+		common.NewAPIError(c, http.StatusInternalServerError, err, err.Error())
 		return
 	}
 	requestBody, err := io.ReadAll(c.Request.Body)
@@ -87,11 +122,17 @@ func (fc *FileControllerImpl) UpdateFile(c *gin.Context) {
 
 func (fc *FileControllerImpl) DeleteFile(c *gin.Context) {
 	username, docID := checkParams(c)
-	_, errAuth := fc.as.ValidateToken(checkTokenInput(c))
-	if errAuth != nil {
+	_, err := fc.as.ValidateToken(checkTokenInput(c))
+	if err != nil {
+		var apiErr *common.APIError
+		if errors.As(err, &apiErr) {
+			common.NewAPIError(c, apiErr.StatusCode, apiErr.Err, apiErr.Message)
+			return
+		}
+		common.NewAPIError(c, http.StatusInternalServerError, err, err.Error())
 		return
 	}
-	_, err := fc.fs.DeleteFile(username, docID)
+	_, err = fc.fs.DeleteFile(username, docID)
 	if err != nil {
 		common.NewAPIError(c, http.StatusNotFound, err, err.Error())
 		return
@@ -101,8 +142,14 @@ func (fc *FileControllerImpl) DeleteFile(c *gin.Context) {
 
 func (fc *FileControllerImpl) GetAllUserDocs(c *gin.Context) {
 	username := c.Param("username")
-	_, errAuth := fc.as.ValidateToken(checkTokenInput(c))
-	if errAuth != nil {
+	_, err := fc.as.ValidateToken(checkTokenInput(c))
+	if err != nil {
+		var apiErr *common.APIError
+		if errors.As(err, &apiErr) {
+			common.NewAPIError(c, apiErr.StatusCode, apiErr.Err, apiErr.Message)
+			return
+		}
+		common.NewAPIError(c, http.StatusInternalServerError, err, err.Error())
 		return
 	}
 	if username == "" {

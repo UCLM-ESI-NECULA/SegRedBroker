@@ -15,8 +15,10 @@ type AuthControllerImpl struct {
 	svc service.AuthService
 }
 
-func NewAuthController() *AuthControllerImpl {
-	return &AuthControllerImpl{svc: service.NewAuthService(*client.NewAuthClient())}
+func NewAuthController(g *gin.RouterGroup) *AuthControllerImpl {
+	controller := &AuthControllerImpl{svc: service.NewAuthService(*client.NewAuthClient())}
+	controller.RegisterRoutes(g)
+	return controller
 }
 
 type AuthController interface {
@@ -40,7 +42,13 @@ func (ac *AuthControllerImpl) Signup(c *gin.Context) {
 		return
 	}
 	token, err := ac.svc.Signup(user.Username, user.Password)
+
 	if err != nil {
+		var apiErr *common.APIError
+		if errors.As(err, &apiErr) {
+			common.NewAPIError(c, http.StatusBadRequest, err, "invalid credentials")
+			return
+		}
 		common.NewAPIError(c, http.StatusBadRequest, err, "invalid credentials")
 		return
 	}

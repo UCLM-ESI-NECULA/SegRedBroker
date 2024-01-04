@@ -2,42 +2,32 @@ package client
 
 import (
 	"bytes"
-	"io"
 	"net/http"
+	"os"
 	"seg-red-broker/internal/app/dao"
-)
-
-const (
-	fileServiceBaseURL = "http://file-service" // Replace with actual File Service URL
 )
 
 // FileClient struct holds the HTTP client and the base URL for the File service
 type FileClient struct {
-	HttpClient *http.Client
-	BaseURL    string
+	Client
 }
 
 // NewFileClient creates a new instance of FileClient
 func NewFileClient() *FileClient {
 	return &FileClient{
-		HttpClient: &http.Client{},
-		BaseURL:    fileServiceBaseURL,
+		Client{
+			HttpClient: &http.Client{},
+			BaseURL:    os.Getenv("FILE_SERVICE_BASE_URL"),
+		},
 	}
-}
-
-// makeRequest is a helper function to make an HTTP request with the base URL
-func (client *FileClient) makeRequest(method, endpoint string, body io.Reader) (*http.Response, error) {
-	req, err := http.NewRequest(method, client.BaseURL+endpoint, body)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Add("Content-Type", "application/json")
-	return client.HttpClient.Do(req)
 }
 
 // GetFile requests a specific file from the File service
 func (client *FileClient) GetFile(username, docID string) (*dao.FileContent, error) {
 	resp, err := client.makeRequest(http.MethodGet, "/"+username+"/"+docID, nil)
+	if err != nil {
+		return nil, err
+	}
 	return getFileContent(resp, err)
 }
 
@@ -69,13 +59,11 @@ func getFileContent(resp *http.Response, err error) (*dao.FileContent, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	var content dao.FileContent
-	err = getBody(resp, &content)
+	err = getBody(resp, &content, err)
 	if err != nil {
 		return nil, err
 	}
-
 	return &content, nil
 }
 
@@ -83,13 +71,11 @@ func getFileSize(resp *http.Response, err error) (*dao.FileSize, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	var content dao.FileSize
-	err = getBody(resp, &content)
+	err = getBody(resp, &content, err)
 	if err != nil {
 		return nil, err
 	}
-
 	return &content, nil
 }
 
@@ -97,12 +83,10 @@ func getFiles(resp *http.Response, err error) (*map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	var content map[string]string
-	err = getBody(resp, &content)
+	err = getBody(resp, &content, err)
 	if err != nil {
 		return nil, err
 	}
-
 	return &content, nil
 }

@@ -15,7 +15,7 @@ func NewAuthService(ac client.AuthClient) *AuthServiceImpl {
 type AuthService interface {
 	Signup(username, password string) (string, error)
 	Login(username, password string) (string, error)
-	ValidateToken(tokenString string) (bool, error)
+	ValidateToken(tokenString string) (string, error)
 }
 
 // Signup handles the /signup endpoint
@@ -29,6 +29,6 @@ func (svc *AuthServiceImpl) Login(username, password string) (string, error) {
 }
 
 // ValidateToken checks if the provided token string is valid and returns the corresponding user.
-func (svc *AuthServiceImpl) ValidateToken(tokenString string) (bool, error) {
+func (svc *AuthServiceImpl) ValidateToken(tokenString string) (string, error) {
 	return svc.ac.ValidateToken(tokenString)
 }

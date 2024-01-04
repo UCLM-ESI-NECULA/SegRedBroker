@@ -2,6 +2,7 @@ package common
 
 import (
 	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -13,7 +14,10 @@ type APIError struct {
 }
 
 func (e *APIError) Error() string {
-	return e.Err.Error()
+	if e.Err != nil {
+		return fmt.Sprintf("status %d: %v: %s", e.StatusCode, e.Err, e.Message)
+	}
+	return fmt.Sprintf("status %d: %s", e.StatusCode, e.Message)
 }
 
 func GenerateAPIError(statusCode int, err error, message string) *APIError {
@@ -34,13 +38,14 @@ func GlobalErrorHandler() gin.HandlerFunc {
 				// Check if it's an APIError
 				var apiErr *APIError
 				if errors.As(e.Err, &apiErr) {
-					c.JSON(apiErr.StatusCode, gin.H{"error": apiErr.Message})
+					c.AbortWithStatusJSON(apiErr.StatusCode, gin.H{"error": apiErr.Message})
 					return
 				}
 			}
 
 			// If it's not an APIError, return a generic server error
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			return
 		}
 	}
 }
