@@ -1,58 +1,92 @@
 package client
 
 import (
+	"github.com/go-resty/resty/v2"
+	"net/http"
+	"os"
+	"seg-red-broker/internal/app/common"
 	"seg-red-broker/internal/app/dao"
 )
 
 // FileClient struct holds the HTTP client and the base URL for the File service
 type FileClient struct {
-	//Client
+	Client *resty.Client
 }
 
 // NewFileClient creates a new instance of FileClient
 func NewFileClient() *FileClient {
+	cl := resty.New()
+	cl.
+		SetBaseURL(os.Getenv("FILE_SERVICE_BASE_URL")).
+		SetHeader("Accept", "application/json").
+		SetError(&common.APIError{})
 	return &FileClient{
-		//Client{
-		//	HttpClient: &http.Client{},
-		//	BaseURL:    os.Getenv("FILE_SERVICE_BASE_URL"),
-		//},
+		Client: cl,
 	}
 }
 
 // GetFile requests a specific file from the File service
 func (client *FileClient) GetFile(username, docID string) (*dao.FileContent, error) {
-	//resp, err := client.makeRequest(http.MethodGet, "/"+username+"/"+docID, nil)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//return getFileContent(resp, err)
-	return nil, nil
+	resp, err := client.Client.R().
+		SetResult(&dao.FileContent{}).
+		SetPathParams(map[string]string{"username": username, "docID": docID}).
+		Get("/{username}/{docID}")
+	if err != nil {
+		return nil, err
+	}
+	return resp.Result().(*dao.FileContent), resp.Error().(*common.APIError)
 }
 
 // CreateFile sends a request to create a file in the File service
 func (client *FileClient) CreateFile(username, docID string, content []byte) (*dao.FileSize, error) {
-	//resp, err := client.makeRequest(http.MethodPost, "/"+username+"/"+docID, bytes.NewBuffer(content))
-	//return getFileSize(resp, err)
-	return nil, nil
+	resp, err := client.Client.R().
+		SetResult(&dao.FileContent{}).
+		SetPathParams(map[string]string{"username": username, "docID": docID}).
+		SetBody(content).
+		Post("/{username}/{docID}")
+	if err != nil {
+		return nil, err
+	}
+	return resp.Result().(*dao.FileSize), resp.Error().(*common.APIError)
 }
 
 // UpdateFile sends a request to update a file in the File service
 func (client *FileClient) UpdateFile(username, docID string, content []byte) (*dao.FileSize, error) {
-	//resp, err := client.makeRequest(http.MethodPut, "/"+username+"/"+docID, bytes.NewBuffer(content))
-	//return getFileSize(resp, err)
-	return nil, nil
+	resp, err := client.Client.R().
+		SetResult(&dao.FileContent{}).
+		SetPathParams(map[string]string{"username": username, "docID": docID}).
+		SetBody(content).
+		Put("/{username}/{docID}")
+	if err != nil {
+		return nil, err
+	}
+	return resp.Result().(*dao.FileSize), resp.Error().(*common.APIError)
 }
 
 // DeleteFile sends a request to delete a file in the File service
-func (client *FileClient) DeleteFile(username, docID string) (bool, error) {
-	//resp, err := client.makeRequest(http.MethodDelete, "/"+username+"/"+docID, nil)
-	//return err == nil && resp.StatusCode == http.StatusOK, err
-	return false, nil
+func (client *FileClient) DeleteFile(username, docID string) error {
+	resp, err := client.Client.R().
+		SetPathParams(map[string]string{"username": username, "docID": docID}).
+		Delete("/{username}/{docID}")
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode() == http.StatusOK {
+		return nil
+	} else {
+		return resp.Error().(*common.APIError)
+	}
 }
 
 // GetAllUserDocs requests all documents for a specific user from the File service
 func (client *FileClient) GetAllUserDocs(username string) (*map[string]string, error) {
-	//resp, err := client.makeRequest(http.MethodGet, "/"+username+"/_all_docs", nil)
-	//return getFiles(resp, err)
-	return nil, nil
+	m := make(map[string]string)
+	resp, err := client.Client.R().
+		SetResult(&m).
+		SetPathParams(map[string]string{"username": username}).
+		Get("/{username}/_all_docs")
+	if err != nil {
+		return nil, err
+	}
+	return resp.Result().(*map[string]string), resp.Error().(*common.APIError)
 }

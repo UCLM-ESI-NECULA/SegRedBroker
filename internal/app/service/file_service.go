@@ -17,7 +17,7 @@ type FileService interface {
 	GetFile(username, docID string) (*dao.FileContent, error)
 	CreateFile(username, docID string, content []byte) (*dao.FileSize, error)
 	UpdateFile(username, docID string, content []byte) (*dao.FileSize, error)
-	DeleteFile(username, docID string) (bool, error)
+	DeleteFile(username, docID string) error
 	GetAllUserDocs(username string) (*map[string]string, error)
 }
 
@@ -33,7 +33,7 @@ func (fs *FileServiceImpl) UpdateFile(username, docID string, content []byte) (*
 	return fs.fc.UpdateFile(username, docID, content)
 }
 
-func (fs *FileServiceImpl) DeleteFile(username, docID string) (bool, error) {
+func (fs *FileServiceImpl) DeleteFile(username, docID string) error {
 	return fs.fc.DeleteFile(username, docID)
 }
 

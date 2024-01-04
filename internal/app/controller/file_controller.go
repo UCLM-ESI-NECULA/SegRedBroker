@@ -170,7 +170,7 @@ func (fc *FileControllerImpl) DeleteFile(c *gin.Context) {
 	}
 
 	// Delete the file from the file service
-	_, err = fc.fs.DeleteFile(user.Username, docID)
+	err = fc.fs.DeleteFile(user.Username, docID)
 	if err != nil {
 		common.HandleError(c, err)
 		return

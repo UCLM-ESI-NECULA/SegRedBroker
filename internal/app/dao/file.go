@@ -1,9 +1,9 @@
 package dao
 
 type FileSize struct {
-	Size int
+	Size int `json:"size"`
 }
 
 type FileContent struct {
-	Content string
+	Content string `json:"content"`
 }
