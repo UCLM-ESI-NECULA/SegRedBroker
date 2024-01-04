@@ -34,7 +34,10 @@ func (client *FileClient) GetFile(username, docID string) (*dao.FileContent, err
 	if err != nil {
 		return nil, err
 	}
-	return resp.Result().(*dao.FileContent), resp.Error().(*common.APIError)
+	if resp.StatusCode() >= 400 {
+		return nil, resp.Error().(*common.APIError)
+	}
+	return resp.Result().(*dao.FileContent), nil
 }
 
 // CreateFile sends a request to create a file in the File service
@@ -47,7 +50,10 @@ func (client *FileClient) CreateFile(username, docID string, content []byte) (*d
 	if err != nil {
 		return nil, err
 	}
-	return resp.Result().(*dao.FileSize), resp.Error().(*common.APIError)
+	if resp.StatusCode() >= 400 {
+		return nil, resp.Error().(*common.APIError)
+	}
+	return resp.Result().(*dao.FileSize), nil
 }
 
 // UpdateFile sends a request to update a file in the File service
@@ -60,7 +66,10 @@ func (client *FileClient) UpdateFile(username, docID string, content []byte) (*d
 	if err != nil {
 		return nil, err
 	}
-	return resp.Result().(*dao.FileSize), resp.Error().(*common.APIError)
+	if resp.StatusCode() >= 400 {
+		return nil, resp.Error().(*common.APIError)
+	}
+	return resp.Result().(*dao.FileSize), nil
 }
 
 // DeleteFile sends a request to delete a file in the File service
@@ -88,5 +97,8 @@ func (client *FileClient) GetAllUserDocs(username string) (*map[string]string, e
 	if err != nil {
 		return nil, err
 	}
-	return resp.Result().(*map[string]string), resp.Error().(*common.APIError)
+	if resp.StatusCode() >= 400 {
+		return nil, resp.Error().(*common.APIError)
+	}
+	return resp.Result().(*map[string]string), nil
 }

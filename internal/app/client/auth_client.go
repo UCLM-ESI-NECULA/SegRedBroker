@@ -33,7 +33,10 @@ func (client *AuthClient) Signup(username, password string) (*dao.Token, error) 
 	if err != nil {
 		return nil, err
 	}
-	return resp.Result().(*dao.Token), resp.Error().(*common.APIError)
+	if resp.StatusCode() >= 400 {
+		return nil, resp.Error().(*common.APIError)
+	}
+	return resp.Result().(*dao.Token), nil
 }
 
 // Login sends a login request to the Auth service
@@ -41,11 +44,14 @@ func (client *AuthClient) Login(username, password string) (*dao.Token, error) {
 	resp, err := client.Client.R().
 		SetBody(dao.User{Username: username, Password: password}).
 		SetResult(&dao.Token{}).
-		Post("/signup")
+		Post("/login")
 	if err != nil {
 		return nil, err
 	}
-	return resp.Result().(*dao.Token), resp.Error().(*common.APIError)
+	if resp.StatusCode() >= 400 {
+		return nil, resp.Error().(*common.APIError)
+	}
+	return resp.Result().(*dao.Token), nil
 }
 
 // ValidateToken sends a validate token request to the Auth service
@@ -57,5 +63,8 @@ func (client *AuthClient) ValidateToken(tokenString string) (*dao.User, error) {
 	if err != nil {
 		return nil, err
 	}
-	return resp.Result().(*dao.User), resp.Error().(*common.APIError)
+	if resp.StatusCode() >= 400 {
+		return nil, resp.Error().(*common.APIError)
+	}
+	return resp.Result().(*dao.User), nil
 }
