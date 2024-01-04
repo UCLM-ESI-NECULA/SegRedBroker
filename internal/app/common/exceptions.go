@@ -2,30 +2,18 @@ package common
 
 import (
 	"errors"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
 
 type APIError struct {
-	StatusCode int
-	Err        error
-	Message    string
+	StatusCode int    `json:"statusCode"`
+	Err        error  `json:"error,omitempty"`
+	Message    string `json:"message"`
 }
 
 func (e *APIError) Error() string {
-	if e.Err != nil {
-		return fmt.Sprintf("status %d: %v: %s", e.StatusCode, e.Err, e.Message)
-	}
-	return fmt.Sprintf("status %d: %s", e.StatusCode, e.Message)
-}
-
-func GenerateAPIError(statusCode int, err error, message string) *APIError {
-	return &APIError{
-		StatusCode: statusCode,
-		Err:        err,
-		Message:    message,
-	}
+	return e.Err.Error()
 }
 
 func GlobalErrorHandler() gin.HandlerFunc {
@@ -38,20 +26,73 @@ func GlobalErrorHandler() gin.HandlerFunc {
 				// Check if it's an APIError
 				var apiErr *APIError
 				if errors.As(e.Err, &apiErr) {
-					c.AbortWithStatusJSON(apiErr.StatusCode, gin.H{"error": apiErr.Message})
+					c.JSON(apiErr.StatusCode, APIError{StatusCode: apiErr.StatusCode, Message: apiErr.Message})
 					return
 				}
 			}
 
 			// If it's not an APIError, return a generic server error
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
-			return
+			c.JSON(http.StatusInternalServerError, APIError{StatusCode: http.StatusInternalServerError, Message: "Internal server error"})
 		}
 	}
 }
 
-// NewAPIError creates an APIError and adds it to the Gin context
-func NewAPIError(c *gin.Context, statusCode int, err error, message string) {
-	apiErr := GenerateAPIError(statusCode, err, message)
-	_ = c.Error(apiErr)
+func UnauthorizedError(message string) *APIError {
+	return &APIError{
+		StatusCode: http.StatusUnauthorized,
+		Message:    message,
+	}
+}
+
+func EmptyParamsError(param string) *APIError {
+	return &APIError{
+		StatusCode: http.StatusBadRequest,
+		Message:    param + " cannot be empty",
+	}
+}
+
+func FileOwnerMismatch() *APIError {
+	return &APIError{
+		StatusCode: http.StatusUnauthorized,
+		Message:    "token and file owner do not match",
+	}
+}
+
+func FileCreationMismatch() *APIError {
+	return &APIError{
+		StatusCode: http.StatusUnauthorized,
+		Message:    "can't create a file for another user, file owner and token do not match",
+	}
+}
+
+func BadRequestError(message string) *APIError {
+	return &APIError{
+		StatusCode: http.StatusBadRequest,
+		Message:    message,
+	}
+}
+
+func ForwardError(c *gin.Context, apiError *APIError) {
+	_ = c.Error(apiError)
+}
+
+func HandleNoRoute() func(c *gin.Context) {
+	return func(c *gin.Context) {
+		c.JSON(http.StatusNotFound, APIError{StatusCode: http.StatusNotFound, Message: "Not found"})
+	}
+}
+
+// HandleError abstracts the error handling logic.
+func HandleError(c *gin.Context, err error) {
+	var apiErr *APIError
+	if errors.As(err, &apiErr) {
+		ForwardError(c, apiErr)
+		return
+	}
+
+	_ = c.Error(&APIError{
+		StatusCode: http.StatusInternalServerError,
+		Err:        err,
+		Message:    err.Error(),
+	})
 }

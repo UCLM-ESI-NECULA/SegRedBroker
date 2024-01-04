@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"errors"
 	"io"
 	"net/http"
 	"seg-red-broker/internal/app/client"
@@ -43,129 +42,183 @@ func (fc *FileControllerImpl) RegisterRoutes(router *gin.RouterGroup) {
 }
 
 func (fc *FileControllerImpl) GetFile(c *gin.Context) {
-	username, docID := checkParams(c)
-	_, err := fc.as.ValidateToken(checkTokenInput(c))
+	// Check if the token is valid
+	user, err := CheckTokenInput(c, fc.as)
 	if err != nil {
-		var apiErr *common.APIError
-		if errors.As(err, &apiErr) {
-			common.NewAPIError(c, apiErr.StatusCode, apiErr.Err, apiErr.Message)
-			return
-		}
-		common.NewAPIError(c, http.StatusInternalServerError, err, err.Error())
+		common.HandleError(c, err)
 		return
 	}
-	content, err := fc.fs.GetFile(username, docID)
-	if err != nil {
-		var apiErr *common.APIError
-		if errors.As(err, &apiErr) {
-			common.NewAPIError(c, apiErr.StatusCode, apiErr.Err, apiErr.Message)
-			return
-		}
-		common.NewAPIError(c, http.StatusInternalServerError, err, err.Error())
-		return
-	}
-	c.JSON(http.StatusOK, content)
-}
 
-func (fc *FileControllerImpl) CreateFile(c *gin.Context) {
-	username, docID := checkParams(c)
-	_, err := fc.as.ValidateToken(checkTokenInput(c))
-	if err != nil {
-		var apiErr *common.APIError
-		if errors.As(err, &apiErr) {
-			common.NewAPIError(c, apiErr.StatusCode, apiErr.Err, apiErr.Message)
-			return
-		}
-		common.NewAPIError(c, http.StatusInternalServerError, err, err.Error())
+	// Check username and docID
+	username, docID, apiErr := checkParams(c)
+	if apiErr != nil {
+		common.ForwardError(c, apiErr)
 		return
 	}
+
+	// Check if the token matches the file owner
+	if username != user.Username {
+		common.ForwardError(c, common.FileOwnerMismatch())
+		return
+	}
+
+	// Get the file from the file service
+	content, err := fc.fs.GetFile(user.Username, docID)
+	if err != nil {
+		common.HandleError(c, err)
+		return
+	}
+
+	// Return the file content
+	c.JSON(http.StatusOK, content)
+
+}
+func (fc *FileControllerImpl) CreateFile(c *gin.Context) {
+	// Check if the token is valid
+	user, err := CheckTokenInput(c, fc.as)
+	if err != nil {
+		common.HandleError(c, err)
+		return
+	}
+
+	// Check username and docID
+	username, docID, apiErr := checkParams(c)
+	if apiErr != nil {
+		common.ForwardError(c, apiErr)
+		return
+	}
+
+	// Check if the token matches the file owner
+	if username != user.Username {
+		common.ForwardError(c, common.FileCreationMismatch())
+		return
+	}
+
+	//ReadBody
 	requestBody, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		common.NewAPIError(c, http.StatusBadRequest, err, "invalid request body")
+		common.ForwardError(c, common.BadRequestError("invalid request body"))
 		return
 	}
 
-	size, err := fc.fs.CreateFile(username, docID, requestBody)
+	size, err := fc.fs.CreateFile(user.Username, docID, requestBody)
 	if err != nil {
-		var apiErr *common.APIError
-		if errors.As(err, &apiErr) {
-			common.NewAPIError(c, apiErr.StatusCode, apiErr.Err, apiErr.Message)
-			return
-		}
-		common.NewAPIError(c, http.StatusInternalServerError, err, err.Error())
+		common.HandleError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, size)
 }
 
 func (fc *FileControllerImpl) UpdateFile(c *gin.Context) {
-	username, docID := checkParams(c)
-	_, err := fc.as.ValidateToken(checkTokenInput(c))
+	// Check if the token is valid
+	user, err := CheckTokenInput(c, fc.as)
 	if err != nil {
-		var apiErr *common.APIError
-		if errors.As(err, &apiErr) {
-			common.NewAPIError(c, apiErr.StatusCode, apiErr.Err, apiErr.Message)
-			return
-		}
-		common.NewAPIError(c, http.StatusInternalServerError, err, err.Error())
-		return
-	}
-	requestBody, err := io.ReadAll(c.Request.Body)
-	if err != nil {
-		common.NewAPIError(c, http.StatusBadRequest, err, "invalid request body")
+		common.HandleError(c, err)
 		return
 	}
 
-	size, _ := fc.fs.UpdateFile(username, docID, requestBody)
+	// Check username and docID
+	username, docID, apiErr := checkParams(c)
+	if apiErr != nil {
+		common.ForwardError(c, apiErr)
+		return
+	}
+
+	// Check if the token matches the file owner
+	if username != user.Username {
+		common.ForwardError(c, common.FileOwnerMismatch())
+		return
+	}
+
+	//ReadBody
+	requestBody, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		common.ForwardError(c, common.BadRequestError("invalid request body"))
+		return
+	}
+
+	// Update the file in the file service
+	size, err := fc.fs.UpdateFile(user.Username, docID, requestBody)
+	if err != nil {
+		common.HandleError(c, err)
+		return
+	}
+
+	// Return the file size
 	c.JSON(http.StatusOK, size)
 }
 
 func (fc *FileControllerImpl) DeleteFile(c *gin.Context) {
-	username, docID := checkParams(c)
-	_, err := fc.as.ValidateToken(checkTokenInput(c))
+	// Check if the token is valid
+	user, err := CheckTokenInput(c, fc.as)
 	if err != nil {
-		var apiErr *common.APIError
-		if errors.As(err, &apiErr) {
-			common.NewAPIError(c, apiErr.StatusCode, apiErr.Err, apiErr.Message)
-			return
-		}
-		common.NewAPIError(c, http.StatusInternalServerError, err, err.Error())
+		common.HandleError(c, err)
 		return
 	}
-	_, err = fc.fs.DeleteFile(username, docID)
-	if err != nil {
-		common.NewAPIError(c, http.StatusNotFound, err, err.Error())
+
+	// Check username and docID
+	username, docID, apiErr := checkParams(c)
+	if apiErr != nil {
+		common.ForwardError(c, apiErr)
 		return
 	}
+
+	// Check if the token matches the file owner
+	if username != user.Username {
+		common.ForwardError(c, common.FileOwnerMismatch())
+		return
+	}
+
+	// Delete the file from the file service
+	_, err = fc.fs.DeleteFile(user.Username, docID)
+	if err != nil {
+		common.HandleError(c, err)
+		return
+	}
+
+	// Return OK
 	c.JSON(http.StatusOK, gin.H{})
 }
 
 func (fc *FileControllerImpl) GetAllUserDocs(c *gin.Context) {
-	username := c.Param("username")
-	_, err := fc.as.ValidateToken(checkTokenInput(c))
+	// Check if the token is valid
+	user, err := CheckTokenInput(c, fc.as)
 	if err != nil {
-		var apiErr *common.APIError
-		if errors.As(err, &apiErr) {
-			common.NewAPIError(c, apiErr.StatusCode, apiErr.Err, apiErr.Message)
-			return
-		}
-		common.NewAPIError(c, http.StatusInternalServerError, err, err.Error())
+		common.HandleError(c, err)
 		return
 	}
+
+	// Check username
+	username := c.Param("username")
 	if username == "" {
-		common.NewAPIError(c, http.StatusBadRequest, nil, "username cannot be empty")
+		common.ForwardError(c, common.EmptyParamsError("username"))
 		return
 	}
-	docs, _ := fc.fs.GetAllUserDocs(username)
+
+	// Check if the token matches the file owner
+	if username != user.Username {
+		common.ForwardError(c, common.FileOwnerMismatch())
+		return
+	}
+
+	docs, err := fc.fs.GetAllUserDocs(username)
+	if err != nil {
+		common.HandleError(c, err)
+		return
+	}
+
 	c.JSON(http.StatusOK, docs)
 }
 
 // checkParams checks if the username and docID are valid
-func checkParams(c *gin.Context) (string, string) {
+func checkParams(c *gin.Context) (string, string, *common.APIError) {
 	username := c.Param("username")
-	docID := c.Param("doc_id")
-	if username == "" || docID == "" {
-		common.NewAPIError(c, http.StatusBadRequest, nil, "invalid input parameters")
+	if username == "" {
+		return "", "", common.EmptyParamsError("username")
 	}
-	return username, docID
+	docID := c.Param("doc_id")
+	if docID == "" {
+		return "", "", common.EmptyParamsError("doc_id")
+	}
+	return username, docID, nil
 }

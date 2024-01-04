@@ -1,8 +1,6 @@
 package controller
 
 import (
-	"errors"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"seg-red-broker/internal/app/client"
@@ -36,72 +34,73 @@ func (ac *AuthControllerImpl) RegisterRoutes(router *gin.RouterGroup) {
 
 // Signup handles the /signup endpoint
 func (ac *AuthControllerImpl) Signup(c *gin.Context) {
+	// Check input
 	user, err := checkUserInput(c)
 	if err != nil {
-		common.NewAPIError(c, http.StatusBadRequest, err, err.Error())
+		common.HandleError(c, err)
 		return
 	}
-	token, err := ac.svc.Signup(user.Username, user.Password)
 
+	// Create user
+	token, err := ac.svc.Signup(user.Username, user.Password)
 	if err != nil {
-		var apiErr *common.APIError
-		if errors.As(err, &apiErr) {
-			common.NewAPIError(c, http.StatusBadRequest, err, "invalid credentials")
-			return
-		}
-		common.NewAPIError(c, http.StatusBadRequest, err, "invalid credentials")
+		common.HandleError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"access_token": token})
+	c.JSON(http.StatusOK, token)
 }
 
 // Login handles the /login endpoint
 func (ac *AuthControllerImpl) Login(c *gin.Context) {
+	// Check input
 	user, err := checkUserInput(c)
 	if err != nil {
-		common.NewAPIError(c, http.StatusBadRequest, err, err.Error())
+		common.HandleError(c, err)
 		return
 	}
+
+	// Login user
 	token, err := ac.svc.Login(user.Username, user.Password)
 	if err != nil {
-		common.NewAPIError(c, http.StatusUnauthorized, err, "invalid credentials")
+		common.HandleError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"access_token": token})
+	c.JSON(http.StatusOK, token)
 }
 
 func (ac *AuthControllerImpl) ValidateToken(c *gin.Context) {
-	token := checkTokenInput(c)
-	if token == "" {
-		return
-	}
-	username, err := ac.svc.ValidateToken(token)
+	// Check input
+	user, err := CheckTokenInput(c, ac.svc)
 	if err != nil {
-		common.NewAPIError(c, http.StatusUnauthorized, err, "invalid token")
+		common.HandleError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"username": username})
-
+	c.JSON(http.StatusOK, user)
 }
 
 // checkUserInput checks if the user input is valid
-func checkUserInput(c *gin.Context) (dao.User, error) {
-	var user dao.User
+func checkUserInput(c *gin.Context) (*dao.User, error) {
+	var user *dao.User
 	if err := c.ShouldBindJSON(&user); err != nil {
-		common.NewAPIError(c, http.StatusUnauthorized, err, "error when mapping request")
-		return user, err
+		return nil, err
 	}
 	if user.Username == "" || user.Password == "" {
-		return user, fmt.Errorf("username and password are required")
+		return nil, common.EmptyParamsError("username")
+	}
+	if user.Password == "" {
+		return nil, common.EmptyParamsError("password")
 	}
 	return user, nil
 }
 
-func checkTokenInput(c *gin.Context) string {
+func CheckTokenInput(c *gin.Context, svc service.AuthService) (*dao.User, error) {
 	token := c.GetHeader("Authorization")
 	if token == "" {
-		common.NewAPIError(c, http.StatusUnauthorized, errors.New("unauthorized"), "authorization header is required")
-		return ""
+		return nil, common.UnauthorizedError("authorization header is required")
 	}
-	return token
+	user, err := svc.ValidateToken(token)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
 }
