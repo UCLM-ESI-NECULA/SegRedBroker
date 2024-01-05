@@ -22,14 +22,14 @@ func NewAuthController(g *gin.RouterGroup) *AuthControllerImpl {
 type AuthController interface {
 	Signup(c *gin.Context)
 	Login(c *gin.Context)
-	ValidateToken(c *gin.Context)
+	//ValidateToken(c *gin.Context)
 }
 
 // RegisterRoutes registers the authentication routes
 func (ac *AuthControllerImpl) RegisterRoutes(router *gin.RouterGroup) {
 	router.POST("/signup", ac.Signup)
 	router.POST("/login", ac.Login)
-	router.POST("/checkToken", ac.ValidateToken)
+	//router.POST("/checkToken", ac.ValidateToken)
 }
 
 // Signup handles the /signup endpoint

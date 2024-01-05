@@ -43,7 +43,7 @@ func (client *FileClient) GetFile(username, docID string) (*dao.FileContent, err
 // CreateFile sends a request to create a file in the File service
 func (client *FileClient) CreateFile(username, docID string, content []byte) (*dao.FileSize, error) {
 	resp, err := client.Client.R().
-		SetResult(&dao.FileContent{}).
+		SetResult(&dao.FileSize{}).
 		SetPathParams(map[string]string{"username": username, "docID": docID}).
 		SetBody(content).
 		Post("/{username}/{docID}")
@@ -59,7 +59,7 @@ func (client *FileClient) CreateFile(username, docID string, content []byte) (*d
 // UpdateFile sends a request to update a file in the File service
 func (client *FileClient) UpdateFile(username, docID string, content []byte) (*dao.FileSize, error) {
 	resp, err := client.Client.R().
-		SetResult(&dao.FileContent{}).
+		SetResult(&dao.FileSize{}).
 		SetPathParams(map[string]string{"username": username, "docID": docID}).
 		SetBody(content).
 		Put("/{username}/{docID}")

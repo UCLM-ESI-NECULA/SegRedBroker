@@ -57,7 +57,7 @@ func (client *AuthClient) Login(username, password string) (*dao.Token, error) {
 // ValidateToken sends a validate token request to the Auth service
 func (client *AuthClient) ValidateToken(tokenString string) (*dao.User, error) {
 	resp, err := client.Client.R().
-		SetAuthToken(tokenString).
+		SetHeader("Authorization", tokenString).
 		SetResult(&dao.User{}).
 		Post("/checkToken")
 	if err != nil {
