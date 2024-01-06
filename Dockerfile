@@ -11,6 +11,8 @@ RUN go mod download
 
 COPY . .
 
+COPY ./certs/mycert.crt ./certs/mycert.key ./
+
 # Build the app
 RUN go build -o main ./cmd/app
 
