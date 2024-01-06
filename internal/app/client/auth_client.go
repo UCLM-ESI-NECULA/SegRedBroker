@@ -1,6 +1,7 @@
 package client
 
 import (
+	"crypto/tls"
 	"github.com/go-resty/resty/v2"
 	"os"
 	"seg-red-broker/internal/app/common"
@@ -18,7 +19,8 @@ func NewAuthClient() *AuthClient {
 	cl.
 		SetBaseURL(os.Getenv("AUTH_SERVICE_BASE_URL")).
 		SetHeader("Accept", "application/json").
-		SetError(&common.APIError{})
+		SetError(&common.APIError{}).
+		SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
 	return &AuthClient{
 		Client: cl,
 	}

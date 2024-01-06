@@ -1,6 +1,7 @@
 package client
 
 import (
+	"crypto/tls"
 	"github.com/go-resty/resty/v2"
 	"net/http"
 	"os"
@@ -19,7 +20,8 @@ func NewFileClient() *FileClient {
 	cl.
 		SetBaseURL(os.Getenv("FILE_SERVICE_BASE_URL")).
 		SetHeader("Accept", "application/json").
-		SetError(&common.APIError{})
+		SetError(&common.APIError{}).
+		SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
 	return &FileClient{
 		Client: cl,
 	}
